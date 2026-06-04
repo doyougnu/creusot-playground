@@ -4,3 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+creusot-std = "0.12.0-dev"
+
+[patch.crates-io]
+creusot-std = { path = "/nix/store/dlrj82540bzwl8x3l99bcp1zq7b77mdf-cargo-creusot-0.12.0-dev/share/creusot-std" }

@@ -1,40 +1,47 @@
 {
-  description = "A devShell example";
-
   inputs = {
-    nixpkgs.url      = "github:NixOS/nixpkgs/nixos-unstable";
-    rust-overlay.url = "github:oxalica/rust-overlay";
-    flake-utils.url  = "github:numtide/flake-utils";
-    cruesot.url      = "github:creusot-rs/creusot";
+    # Both `nixpkgs` and `flake-parts` are pinned to the same version as Creusot's
+    nixpkgs.follows = "creusot/nixpkgs";
+    flake-parts.follows = "creusot/flake-parts";
+    creusot.url = "github:creusot-rs/creusot";
   };
+  outputs =
+    inputs@{
+      creusot,
+      flake-parts,
+      nixpkgs,
+      self,
+    }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      systems = [
+        "aarch64-darwin"
+        "x86_64-linux"
+      ];
+      perSystem =
+        {
+          pkgs,
+          system,
+          ...
+        }:
+        {
 
-  outputs = { self, nixpkgs, rust-overlay, flake-utils, ... }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        overlays = [ (import rust-overlay) ];
-        pkgs = import nixpkgs {
-          inherit system overlays;
+          _module.args.pkgs = import nixpkgs {
+            inherit system;
+            overlays = [ creusot.overlays.default ];
+          };
+
+          formatter = pkgs.nixfmt-tree;
+
+          devShells.default = pkgs.mkShell {
+            packages = [
+              (pkgs.creusot.mkCreusotWrapped { isFree = true; })
+              pkgs.cargo
+              pkgs.clippy
+              pkgs.rust-analyzer
+              pkgs.rustfmt
+              # ...
+            ];
+          };
         };
-      in
-      {
-        devShells.default = with pkgs; mkShell {
-          packages = [
-            rust-analyzer
-            rustfmt
-            creusot
-          ];
-
-          buildInputs = [
-            openssl
-            pkg-config
-            rust-bin.nightly.latest.default
-          ];
-
-          shellHook = ''
-            # alias ls=eza
-            # alias find=fd
-          '';
-        };
-      }
-    );
+    };
 }
